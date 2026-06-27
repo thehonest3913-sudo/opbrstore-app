@@ -1,10 +1,9 @@
 import streamlit as st
 import gspread
-from datetime import datetime
 
 # 1. إعداد الصفحة
-st.set_page_config(page_title="سجل المبيعات", page_icon="📈")
-st.title("📈 لوحة تسجيل الأسعار")
+st.set_page_config(page_title="مخزني", page_icon="📦")
+st.title("📦 لوحة تحكم Opbrstore")
 
 # 2. دالة الاتصال
 def get_worksheet():
@@ -15,39 +14,51 @@ def get_worksheet():
         sh = gc.open_by_key(spreadsheet_id)
         return sh.sheet1
     except Exception as e:
-        return None # نرجع None في حالة الخطأ
+        return f"خطأ في الاتصال: {e}"
 
 # 3. واجهة الإدخال
-price = st.text_input("أدخل السعر:")
+name = st.text_input("اسم المنتج")
+price = st.text_input("السعر")
 
-# 4. زر الإضافة
+# 4. زر الإضافة (بالمنطق الجديد)
 if st.button("إضافة للمخزون"):
-    if not price:
-        st.error("يرجى إدخال السعر!")
+    if not name or not price:
+        st.error("يرجى إدخال البيانات!")
     else:
         ws = get_worksheet()
-        if ws is None:
-            st.error("فشل الاتصال بملف الشيت، تأكد من الـ Secrets!")
+        if isinstance(ws, str):
+            st.error(ws)
         else:
             try:
-                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                # البحث عن الصف التالي
-                col_a = ws.col_values(1)
-                next_row = len(col_a) + 1
-                if next_row < 2: next_row = 2
+                # البحث عن أول صف فارغ في العمود A
+                col_a_values = ws.col_values(1)
+                next_row = len(col_a_values) + 1
                 
-                # التسجيل
-                ws.update_cell(next_row, 1, now)
-                ws.update_cell(next_row, 2, str(price))
-                st.success("تم الحفظ بنجاح!")
+                # إجبار الكود على البدء من الصف الثالث إذا كان الجدول فارغاً
+                if next_row < 3:
+                    next_row = 3
+                
+                # الكتابة بدقة
+                ws.update_cell(next_row, 1, str(price)) # السعر في العمود A
+                ws.update_cell(next_row, 2, "")         # العمود B فارغ
+                ws.update_cell(next_row, 3, str(name))  # الاسم في العمود C
+                
+                st.success(f"تمت الإضافة في الصف {next_row} بنجاح!")
             except Exception as e:
-                st.error(f"حدث خطأ: {e}")
+                st.error(f"خطأ أثناء الكتابة: {e}")
 
-# 5. زر العرض
-if st.button("عرض السجل"):
+# 5. زر عرض المخزون (يعرض بدءاً من الصف الثالث)
+if st.button("عرض المخزون"):
     ws = get_worksheet()
-    if ws:
-        data = ws.get_all_values()
-        st.table(data)
+    if isinstance(ws, str):
+        st.error(ws)
     else:
-        st.error("لا يمكن الوصول للبيانات.")
+        try:
+            data = ws.get_all_values()
+            if len(data) < 3:
+                st.warning("المخزون فارغ أو لم نصل للصف الثالث بعد.")
+            else:
+                # عرض البيانات بدءاً من الصف الثالث (فهرس 2)
+                st.table(data[2:]) 
+        except Exception as e:
+            st.error(f"خطأ أثناء جلب البيانات: {e}")
