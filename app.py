@@ -1,46 +1,40 @@
 import streamlit as st
 import gspread
+import json
+import base64
 
-# 1. إعداد الصفحة
 st.set_page_config(page_title="مخزني", page_icon="📦")
 st.title("📦 لوحة تحكم Opbrstore")
 
-# 2. دالة الاتصال
 def get_worksheet():
     try:
-        # قراءة البيانات من القسم gcp_service_account
-        creds_dict = st.secrets["gcp_service_account"]
+        # 1. جلب النص المشفر من الـ Secrets
+        encoded_json = st.secrets["GCP_JSON"]
+        
+        # 2. فك التشفير (Base64 -> JSON String)
+        decoded_bytes = base64.b64decode(encoded_json)
+        creds_dict = json.loads(decoded_bytes)
+        
+        # 3. الاتصال بجوجل
         gc = gspread.service_account_from_dict(creds_dict)
-        spreadsheet_id = '1KqtT9GcNs1Zb4UJ6pT00kDLYsKDyi_cWf3wqfxRB1w'
-        sh = gc.open_by_key(spreadsheet_id)
+        sh = gc.open_by_key('1KqtT9GcNs1Zb4UJ6pT00kDLYsKDyi_cWf3wqfxRB1w')
         return sh.sheet1
     except Exception as e:
         return f"خطأ في الاتصال: {e}"
 
-# 3. واجهة الإدخال
 name = st.text_input("اسم المنتج")
 price = st.text_input("السعر")
 
-# 4. زر الإضافة
 if st.button("إضافة للمخزون"):
     if not name or not price:
-        st.error("يرجى التأكد من إدخال اسم المنتج والسعر!")
+        st.error("يرجى إدخال اسم المنتج والسعر!")
     else:
         ws = get_worksheet()
         if isinstance(ws, str):
-            st.error(ws) # عرض رسالة الخطأ في حال وجودها
+            st.error(ws)
         else:
             try:
-                ws.append_row([price, "", name])
-                st.success(f"تمت إضافة {name} بسعر {price} بنجاح!")
+                ws.append_row([str(price), "", name])
+                st.success(f"تمت إضافة {name} بنجاح!")
             except Exception as e:
-                st.error(f"خطأ أثناء الإضافة للشيت: {e}")
-
-# 5. عرض المنتجات
-if st.button("تحديث وعرض المخزون"):
-    ws = get_worksheet()
-    if isinstance(ws, str):
-        st.error(ws)
-    else:
-        data = ws.get_all_values()
-        st.table(data)
+                st.error(f"خطأ أثناء الكتابة: {e}")
