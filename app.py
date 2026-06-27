@@ -16,7 +16,7 @@ def get_worksheet():
         spreadsheet_id = '1KqtT9GcNs1Zb4UJ6pT00kDLYsKDyi_cWf3wqfxRB1w'
         sh = gc.open_by_key(spreadsheet_id)
         
-        # اختيار الورقة الأولى (تأكد أنك سميتها Sheet1 أو غيرها)
+        # اختيار الورقة الأولى
         return sh.sheet1 
     except Exception as e:
         return str(e)
@@ -34,12 +34,12 @@ if st.button("إضافة للمخزون"):
         if isinstance(ws, str):
             st.error(f"خطأ في الاتصال بجوجل: {ws}")
         else:
-            # إضافة الصف
-            ws.append_row([name, price])
-            st.success(f"تمت إضافة {name} بنجاح!")
-            st.balloons() # احتفال صغير
+            # التعديل هنا: وضع السعر في A، فراغ في B، والاسم في C
+            ws.append_row([price, "", name])
+            st.success(f"تمت إضافة {name} بسعر {price} بنجاح!")
+            st.balloons() 
 
-# 5. عرض المنتجات الموجودة حالياً (للتأكد أن الإضافة تمت)
+# 5. عرض المنتجات (اختياري للتأكد)
 if st.button("تحديث وعرض المخزون"):
     ws = get_worksheet()
     if not isinstance(ws, str):
