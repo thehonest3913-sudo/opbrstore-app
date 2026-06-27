@@ -1,5 +1,6 @@
 import streamlit as st
 import gspread
+from datetime import datetime # استدعاء مكتبة الوقت
 
 # 1. إعداد الصفحة
 st.set_page_config(page_title="مخزني", page_icon="📦")
@@ -17,48 +18,30 @@ def get_worksheet():
         return f"خطأ في الاتصال: {e}"
 
 # 3. واجهة الإدخال
-name = st.text_input("اسم المنتج")
-price = st.text_input("السعر")
+price = st.text_input("سعر المنتج")
 
-# 4. زر الإضافة (بالمنطق الجديد)
+# 4. زر الإضافة
 if st.button("إضافة للمخزون"):
-    if not name or not price:
-        st.error("يرجى إدخال البيانات!")
+    if not price:
+        st.error("يرجى إدخال السعر!")
     else:
         ws = get_worksheet()
         if isinstance(ws, str):
             st.error(ws)
         else:
             try:
-                # البحث عن أول صف فارغ في العمود A
+                # جلب التاريخ والوقت الحالي
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # البحث عن الصف التالي في العمود A
                 col_a_values = ws.col_values(1)
                 next_row = len(col_a_values) + 1
+                if next_row < 2: next_row = 2 # للبدء بعد العناوين
                 
-                # إجبار الكود على البدء من الصف الثالث إذا كان الجدول فارغاً
-                if next_row < 3:
-                    next_row = 3
+                # الكتابة: التاريخ في A، السعر في B
+                ws.update_cell(next_row, 1, now)
+                ws.update_cell(next_row, 2, str(price))
                 
-                # الكتابة بدقة
-                ws.update_cell(next_row, 1, str(price)) # السعر في العمود A
-                ws.update_cell(next_row, 2, "")         # العمود B فارغ
-                ws.update_cell(next_row, 3, str(name))  # الاسم في العمود C
-                
-                st.success(f"تمت الإضافة في الصف {next_row} بنجاح!")
+                st.success(f"تم تسجيل السعر {price} في الصف {next_row} بتاريخ {now}")
             except Exception as e:
                 st.error(f"خطأ أثناء الكتابة: {e}")
-
-# 5. زر عرض المخزون (يعرض بدءاً من الصف الثالث)
-if st.button("عرض المخزون"):
-    ws = get_worksheet()
-    if isinstance(ws, str):
-        st.error(ws)
-    else:
-        try:
-            data = ws.get_all_values()
-            if len(data) < 3:
-                st.warning("المخزون فارغ أو لم نصل للصف الثالث بعد.")
-            else:
-                # عرض البيانات بدءاً من الصف الثالث (فهرس 2)
-                st.table(data[2:]) 
-        except Exception as e:
-            st.error(f"خطأ أثناء جلب البيانات: {e}")
