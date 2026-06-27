@@ -5,7 +5,6 @@ import gspread
 st.set_page_config(page_title="مخزني", page_icon="📦")
 st.title("📦 لوحة تحكم Opbrstore")
 
-# دالة الاتصال
 def get_worksheet():
     try:
         creds_dict = st.secrets["gcp"]
@@ -16,11 +15,9 @@ def get_worksheet():
     except Exception as e:
         return f"خطأ في الاتصال: {e}"
 
-# واجهة الإدخال
 name = st.text_input("اسم المنتج")
 price = st.text_input("السعر")
 
-# زر الإضافة
 if st.button("إضافة للمخزون"):
     if not name or not price:
         st.error("يرجى إدخال البيانات!")
@@ -30,13 +27,13 @@ if st.button("إضافة للمخزون"):
             st.error(ws)
         else:
             try:
-                # [السعر في A، فراغ في B، الاسم في C]
+                # الترتيب: [العمود A، العمود B (فارغ)، العمود C]
                 ws.append_row([str(price), "", str(name)])
-                st.success(f"تمت إضافة {name} بنجاح!")
+                st.success(f"تمت إضافة {name} في العمود C بنجاح!")
             except Exception as e:
                 st.error(f"خطأ أثناء الكتابة: {e}")
 
-# زر عرض المخزون
+# زر عرض المخزون (يعرض بدءاً من الصف الثالث)
 if st.button("عرض المخزون"):
     ws = get_worksheet()
     if isinstance(ws, str):
@@ -44,10 +41,10 @@ if st.button("عرض المخزون"):
     else:
         try:
             data = ws.get_all_values()
-            if len(data) <= 1:
-                st.warning("المخزون فارغ.")
+            if len(data) < 3:
+                st.warning("المخزون فارغ أو لم نصل للصف الثالث بعد.")
             else:
-                # عرض البيانات في جدول
-                st.table(data)
+                # عرض البيانات بدءاً من الصف الثالث (الفهرس 2)
+                st.table(data[2:]) 
         except Exception as e:
             st.error(f"خطأ أثناء جلب البيانات: {e}")
